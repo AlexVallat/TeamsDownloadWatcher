@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 using TeamsDownloadWatcher.Properties;
@@ -14,9 +13,6 @@ namespace TeamsDownloadWatcher
     {
         private const string AppName = "TeamsDownloadWatcher";
 
-        private static readonly Guid DownloadsFolderRfid = new Guid("374DE290-123F-4565-9164-39C4925E467B");
-		[DllImport("Shell32.dll")]
-        private static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr ppszPath);
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
@@ -54,9 +50,9 @@ namespace TeamsDownloadWatcher
                     }
                 };
 
-                _fileSystemWatcher = new FileSystemWatcher(GetDownloadsFolder(), "????????-????-????-????-????????????.tmp") {NotifyFilter = NotifyFilters.FileName};
+                _fileSystemWatcher = new FileSystemWatcher(GetDownloadsFolder()) {NotifyFilter = NotifyFilters.FileName};
 
-                _fileSystemWatcher.Renamed += OnNewDownload;
+                _fileSystemWatcher.Created += OnNewDownload;
                 _fileSystemWatcher.EnableRaisingEvents = true;
 
                 _notifyIcon.Click += OnIconClick;
@@ -64,16 +60,7 @@ namespace TeamsDownloadWatcher
 
             private static string GetDownloadsFolder()
 			{
-                const uint DontVerify = 0x4000;
-                var hResult = SHGetKnownFolderPath(DownloadsFolderRfid, DontVerify, IntPtr.Zero, out var ppszPath);
-                if (hResult < 0)
-				{
-                    throw new ExternalException("Could not obtain download folder", hResult);
-				}
-
-                var result = Marshal.PtrToStringUni(ppszPath);
-                Marshal.FreeCoTaskMem(ppszPath);
-                return result;
+                return Path.Combine(Path.GetTempPath(), "TeamsDownload");
             }
 
             private bool StartWithWindows
@@ -128,7 +115,14 @@ namespace TeamsDownloadWatcher
                 {
                     if (folderBrowser.ShowDialog() == DialogResult.OK)
                     {
-                        Settings.Default.DownloadLocation = folderBrowser.SelectedPath;
+                        if (folderBrowser.SelectedPath.Equals(GetDownloadsFolder(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            Settings.Default.DownloadLocation = null;
+                        }
+                        else
+                        {
+                            Settings.Default.DownloadLocation = folderBrowser.SelectedPath;
+                        }
                         Settings.Default.Save();
 
                         ((ToolStripMenuItem)sender).ToolTipText = Settings.Default.DownloadLocation;
@@ -152,7 +146,7 @@ namespace TeamsDownloadWatcher
                 Application.Exit();
             }
 
-            private static void OnNewDownload(object sender, RenamedEventArgs e)
+            private static void OnNewDownload(object sender, FileSystemEventArgs e)
             {
                 var destFileName = e.FullPath;
                 var destPath = Settings.Default.DownloadLocation;
