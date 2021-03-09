@@ -1,3 +1,6 @@
+# ARCHIVED
+Teams has changed how it handles downloaded files, and the new method no longer works with a system like this. I have thererefore archived this project. In the unlikely event that Teams changes again to how it handles downloads, and the new method offers some way for a file system watcher to detect the downloaded file, I will un-archive it.
+
 # TeamsDownloadWatcher
 Watches Microsoft Teams for downloaded files, then moves and/or opens them. Teams has so far failed to provide the ability to specify the location to download files to, or the ability to just open a file rather than downloading it. This project is a dirty little workaround to get this behaviour.
 
